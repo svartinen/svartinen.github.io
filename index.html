@@ -79,6 +79,7 @@
     // Object manager for entities on game area:
     function component(x, y, width, height, color, offsetX=0, offsetY=0, speed=1, type) {
         this.type = type;
+        this.color = color;
         if (this.type == "image") {
             this.image = new Image();
             this.image.src = color;
@@ -89,6 +90,7 @@
         this.offsetY = offsetY;
         this.x = x;
         this.y = y;
+        this.speed = speed;
         
 		this.update = function() {
             ctx = gameArea.context;
@@ -232,7 +234,6 @@
         var ended = false;
         
         if(!paused) {
-            frames++;
             gameArea.clear();
             character.newPos();    
             character.update();
@@ -420,18 +421,32 @@
             startGame();
             
             var gameState = evt.data.gameState;
-            character = gameState.character;
-            hp = gameState.hp;
-            projectileList = gameState.projectileList;
-            enemyList = gameState.enemyList;
-            score = gameState.score;
             
-            console.log(gameState);
+            character.x = gameState.character.x;
+            character.y = gameState.character.y;
+            character.offsetX = gameState.character.offsetX;
+            character.offsetY = gameState.character.offsetY;
+            
+            hp = gameState.hp;
+            
+            for(var key in gameState.projectileList){
+                var projectile = gameState.projectileList[key];
+                new projectile(projectile.id, projectile.component.x, projectile.component.y, projectile.component.width, 
+                    projectile.component.height, projectile.component.offsetX, projectile.component.offsetY);
+            }
+            
+            for(var key in gameState.enemyList){
+                var enemy = gameState.enemyList[key];
+                new enemy(enemy.id, enemy.component.x, enemy.component.y, enemy.component.width, enemy.component.height, 
+                    enemy.component.offsetX, enemy.component.offsetY, enemy.component.speed, enemy.component.color, enemy.component.type);
+            }
+            
+            score = gameState.score;
             console.log(character);
-            console.log(hp);
-            console.log(projectileList);
             console.log(enemyList);
+            console.log(projectileList);
             console.log(score);
+            console.log(hp);
         } else if (evt.data.messageType === "ERROR") {
             alert(evt.data.info);
         }
