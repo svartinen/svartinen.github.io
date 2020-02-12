@@ -23,19 +23,25 @@
     
     // Global variables for game:
     var character;
-    var hp = 100;
-    var score = 0;
-	var projectileList = {};
-    var enemyList = {};
-    var paused = false;
+    var hp;
+    var score;
+	var projectileList;
+    var enemyList;
+    var paused;
     var enemyInterval;
-    var loading = false;
 
     // Initializes game
     function startGame() {
         // Set up player character and game area:
         character = new component(170, 170, 30, 30, "saucer.png", offsetX=0, offsetY=0, speed=10, type="image");  
         gameArea.start();
+        
+        // Set global variables:
+        hp = 100;
+        score = 0;
+        projectileList = {};
+        enemyList = {};
+        paused = false;
         
         // Set up event listeners for game controls:
         document.addEventListener('keydown', keyboardControlsManager);
@@ -269,21 +275,15 @@
                 }
             }
             
-            
             ctx.font = "10px Verdana";
             ctx.fillStyle = "red";
             ctx.fillText("HP: " + hp, 30, 30);
             ctx.fillText("Score: " + score, 30, 40);
-            
-            if(hp < 1){
-                ctx.font = "50px Impact";
-                ctx.fillStyle = "red";
-                ctx.fillText("GAME OVER", 50, 200);
-                showEndScreen();
-            }
         }
-        if(hp >= 1 && !loading) {
+        if(hp >= 1) {
             requestAnimationFrame(updateGameArea);
+        } else {
+            showEndScreen();
         }
     }
 
@@ -323,8 +323,6 @@
     }
     
     function showEndScreen() {
-        clearInterval(enemyInterval);
-        
         // Show correct button on menu:
         var menu = document.getElementById("menu");
         var continueGame = document.getElementById("continue");
@@ -334,12 +332,8 @@
         var saveGame = document.getElementById("save_game");
         saveGame.style.display = "none";
         
-        // Reset global variables:
-        hp = 100;
-        score = 0;
-        projectileList = {};
-        enemyList = {};
-        paused = false;
+        // Display menu:
+        menu.style.display = "block";
         
         // Delete event listeners:
         document.removeEventListener('keydown', keyboardControlsManager);
@@ -348,8 +342,13 @@
         // Stop spawning enemies:
         clearInterval(enemyInterval);
         
-        // Display menu:
-        menu.style.display = "block";
+        requestAnimationFrame(endScreen());
+    }
+    
+    function endScreen() {
+        ctx.font = "50px Impact";
+        ctx.fillStyle = "red";
+        ctx.fillText("GAME OVER", 50, 200); 
     }
     
 	function keyboardControlsManager(e) {
@@ -406,7 +405,6 @@
             "messageType": "LOAD_REQUEST"
         };
         window.parent.postMessage(msg, "*");
-        loading = true;
     }
     
     function saveScoreMessage() {
@@ -418,8 +416,7 @@
     }
     
     window.addEventListener("message", function(evt) {
-        if(evt.data.messageType === "LOAD") {  
-            showEndScreen();
+        if(evt.data.messageType === "LOAD") {
             startGame();
             
             var gameState = evt.data.gameState;
@@ -444,7 +441,6 @@
             }
             
             score = gameState.score;
-            loading = false;
         } else if (evt.data.messageType === "ERROR") {
             alert(evt.data.info);
         }
