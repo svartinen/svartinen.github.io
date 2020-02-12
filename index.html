@@ -410,7 +410,7 @@
     function saveScoreMessage() {
         var msg = {
             "messageType": "SCORE",
-            "score": parseFloat(score).text
+            "score": score
         };
         window.parent.postMessage(msg, "*");
     }
@@ -430,15 +430,15 @@
             hp = gameState.hp;
             
             for(var key in gameState.projectileList){
-                var projectile = gameState.projectileList[key];
-                new projectile(projectile.id, projectile.component.x, projectile.component.y, projectile.component.width, 
-                    projectile.component.height, projectile.component.offsetX, projectile.component.offsetY);
+                var savedProjectile = gameState.projectileList[key];
+                new projectile(savedProjectile.id, savedProjectile.component.x, savedProjectile.component.y, savedProjectile.component.width, 
+                    savedProjectile.component.height, savedProjectile.component.offsetX, savedProjectile.component.offsetY);
             }
             
             for(var key in gameState.enemyList){
-                var enemy = gameState.enemyList[key];
-                new enemy(enemy.id, enemy.component.x, enemy.component.y, enemy.component.width, enemy.component.height, 
-                    enemy.component.offsetX, enemy.component.offsetY, enemy.component.speed, enemy.component.color, enemy.component.type);
+                var savedEnemy = gameState.enemyList[key];
+                new enemy(savedEnemy.id, savedEnemy.component.x, savedEnemy.component.y, savedEnemy.component.width, savedEnemy.component.height, 
+                    savedEnemy.component.offsetX, savedEnemy.component.offsetY, savedEnemy.component.speed, savedEnemy.component.color, savedEnemy.component.type);
             }
             
             score = gameState.score;
