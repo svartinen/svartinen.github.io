@@ -29,6 +29,7 @@
     var enemyList = {};
     var paused = false;
     var enemyInterval;
+    var loading = false;
 
     // Initializes game
     function startGame() {
@@ -281,7 +282,7 @@
                 showEndScreen();
             }
         }
-        if(hp >= 1) {
+        if(hp >= 1 && !loading) {
             requestAnimationFrame(updateGameArea);
         }
     }
@@ -417,6 +418,8 @@
     
     window.addEventListener("message", function(evt) {
         if(evt.data.messageType === "LOAD") {
+            loading = true;
+            
             showEndScreen();
             startGame();
             
@@ -442,6 +445,7 @@
             }
             
             score = gameState.score;
+            loading = false;
         } else if (evt.data.messageType === "ERROR") {
             alert(evt.data.info);
         }
