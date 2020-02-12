@@ -421,10 +421,10 @@
             startGame();
             
             var gameState = evt.data.gameState;
-            character = JSON.parse(gameState.character);
+            character = gameState.character;
             hp = gameState.hp;
-            projectileList = JSON.parse(gameState.projectileList);
-            enemyList = JSON.parse(gameState.enemyList);
+            projectileList = gameState.projectileList;
+            enemyList = gameState.enemyList;
             score = gameState.score;
             
             console.log(gameState);
