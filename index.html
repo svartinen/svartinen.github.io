@@ -418,6 +418,7 @@
     window.addEventListener("message", function(evt) {
         if(evt.data.messageType === "LOAD") {
             showEndScreen();
+            togglePause();
             startGame();
             
             var gameState = evt.data.gameState;
@@ -442,11 +443,6 @@
             }
             
             score = gameState.score;
-            console.log(character);
-            console.log(enemyList);
-            console.log(projectileList);
-            console.log(score);
-            console.log(hp);
         } else if (evt.data.messageType === "ERROR") {
             alert(evt.data.info);
         }
