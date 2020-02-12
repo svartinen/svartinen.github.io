@@ -231,8 +231,6 @@
     }
 
     function updateGameArea() {
-        var ended = false;
-        
         if(!paused) {
             gameArea.clear();
             character.newPos();    
@@ -277,14 +275,13 @@
             ctx.fillText("Score: " + score, 30, 40);
             
             if(hp < 1){
-                ended = true;
                 ctx.font = "50px Impact";
                 ctx.fillStyle = "red";
                 ctx.fillText("GAME OVER", 50, 200);
                 showEndScreen();
             }
         }
-        if(!ended) {
+        if(hp >= 1) {
             requestAnimationFrame(updateGameArea);
         }
     }
