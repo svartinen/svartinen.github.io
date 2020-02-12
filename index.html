@@ -341,7 +341,6 @@
         projectileList = {};
         enemyList = {};
         paused = false;
-        frames = 0;
         
         // Delete event listeners:
         document.removeEventListener('keydown', keyboardControlsManager);
@@ -428,6 +427,11 @@
             score = gameState.score;
             
             console.log(gameState);
+            console.log(character);
+            console.log(hp);
+            console.log(projectileList);
+            console.log(enemyList);
+            console.log(score);
         } else if (evt.data.messageType === "ERROR") {
             alert(evt.data.info);
         }
