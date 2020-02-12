@@ -418,7 +418,6 @@
     window.addEventListener("message", function(evt) {
         if(evt.data.messageType === "LOAD") {
             showEndScreen();
-            togglePause();
             startGame();
             
             var gameState = evt.data.gameState;
