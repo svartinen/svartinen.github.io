@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Shooting Game</title>
+  <meta charset="utf-8"/>
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script>
+    $(document).ready( function() {
+        var msg =  {
+            messageType: "SETTING",
+            options: {
+                "width": 500,
+                "height": 500
+            }
+        };
+        window.parent.postMessage(msg, "*");
+    });
+  </script>
+</head>
+<body onload="startGame()">
+    <script>  
+    // Game logic:
+    
+    // Global variables for game:
+    var character;
+    var hp = 100;
+    var score = 0;
+	var projectileList = {};
+    var enemyList = {};
+    var paused = false;
+    var enemyInterval;
+
+    // Initializes game
+    function startGame() {
+        // Set up player character and game area:
+        character = new component(170, 170, 30, 30, "saucer.png", offsetX=0, offsetY=0, speed=10, type="image");  
+        gameArea.start();
+        
+        // Set up event listeners for game controls:
+        document.addEventListener('keydown', keyboardControlsManager);
+        document.addEventListener('click', mouseControlsManager);
+        
+        // Show correct buttons on pause menu:
+        var continueGame = document.getElementById("continue");
+        continueGame.style.display = "inline-block";
+        var newGame = document.getElementById("new_game");
+        newGame.style.display = "none";
+        var saveGame = document.getElementById("save_game");
+        saveGame.style.display = "inline-block";
+        
+        // Don't show pause menu since game starts unpaused:
+        var menu = document.getElementById("menu");
+        menu.style.display = "none";
+        
+        // Generate a new enemy at a certain rate of time:
+        enemyInterval = setInterval(function () {generateEnemy(0.5, "rock.png", "image")}, 500);
+        
+        // Start game loop:
+        requestAnimationFrame(updateGameArea);
+    }
+
+    var gameArea = {
+        canvas: document.createElement("canvas"),
+        start: function() {
+            this.canvas.width = 400;
+            this.canvas.height = 400;
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        },
+        clear: function() {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.context.beginPath();
+            this.context.rect(0, 0, this.canvas.width, this.canvas.height);
+            this.context.fillStyle = "black";
+            this.context.fill();
+        }
+    }
+
+    // Object manager for entities on game area:
+    function component(x, y, width, height, color, offsetX=0, offsetY=0, speed=1, type) {
+        this.type = type;
+        if (this.type == "image") {
+            this.image = new Image();
+            this.image.src = color;
+        }
+        this.width = width;
+        this.height = height;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+        this.x = x;
+        this.y = y;
+        
+		this.update = function() {
+            ctx = gameArea.context;
+            if (this.type == "image") {
+                ctx.drawImage(this.image,
+                this.x,
+                this.y,
+                this.width, this.height)
+            } else {
+                ctx.fillStyle = color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+        
+        // Move to offset directions if area bounds are not hit:
+		this.newPos = function() {
+            var newX = this.x + (this.offsetX * speed);
+            var newY = this.y + (this.offsetY * speed);
+            if(newX < gameArea.canvas.width - this.width && newX >= 0) {
+                this.x = newX;
+            }
+            if(newY < gameArea.canvas.height - this.height && newY >= 0) {
+                this.y = newY;
+            }
+			this.offsetX = 0;
+			this.offsetY = 0;
+        }    
+    }
+    
+    // Test whether two component rectangles collide. Returns true if they do. 
+    function testCollision(c1, c2) {
+        var x1 = c1.x - c1.width / 2;
+        var y1 = c1.y - c1.height / 2;
+        
+        var x2 = c2.x - c2.width / 2;
+        var y2 = c2.y - c2.height / 2;
+        
+        return x1 <= x2 + c2.width && x2 <= x1 + c1.width && y1 <= y2 + c2.height && y2 <= y1 + c1.height; 
+    }
+	
+    // Object manager for shootable projectiles
+	function projectile(id, x, y, width, height, offsetX=0, offsetY=0, speed=10, color='red') {
+        this.component = new component(x, y, width, height, color, offsetX, offsetY);
+		this.id = id;
+        
+		projectileList[id] = this;
+		
+		this.update = function() {
+			this.component.update();
+		}
+		// Move to offset direction. If this pojectile goes outside area bounds, remove in from the list of tracked pojectiles.
+        this.newPos = function() {
+			this.component.x += this.component.offsetX * speed;
+			this.component.y += this.component.offsetY * speed;
+                       
+			if(this.component.x < 0 || this.component.x > gameArea.canvas.width){
+				delete projectileList[this.id];
+			}
+			if(this.component.y < 0 || this.component.y > gameArea.canvas.height){
+				delete projectileList[this.id];
+			}
+		}
+	}
+    
+    // Returns a unit vector [x, y] that shows which way you should go from the point (x, y) to end up in the point (targetX, targetY)  
+    function calculateDirection(x, y, targetX, targetY) {
+        // Calculate direction vector:
+        var offsetX = targetX - x;
+        var offsetY = targetY - y;
+		var length = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+        
+        return [offsetX / length, offsetY / length];
+    }
+	
+    // Generate a new pojectile that starts at the player player position and advances toward the point (targetX, targetY) 
+	function generateProjectileFromCharacter(targetX, targetY){
+        var x = character.x;
+        var y = character.y;
+        var height = 10;
+        var width = 10;
+        var id = Math.random();
+        
+        var dir = calculateDirection(x, y, targetX, targetY);
+        
+        new projectile(id, x, y, width, height, dir[0], dir[1]);
+	}
+	
+    // Object manager for enemy characters
+	function enemy(id, x, y, width, height, offsetX=0, offsetY=0, speed=1, color='green', type) {
+		this.component = new component(x, y, width, height, color, offsetX, offsetY, speed, type);
+		this.id = id;
+		
+		enemyList[id] = this;
+		
+		this.update = function() {
+			this.component.update();
+		}
+        
+		// Move toward the player character
+        this.newPos = function() {
+			var dir = calculateDirection(this.component.x, this.component.y, character.x, character.y);
+            
+            this.component.x += dir[0] * speed;
+			this.component.y += dir[1] * speed;
+		}
+	}
+    
+    // Generate a random enemy: 
+    function generateEnemy(speed=1, color, type) {
+        var height = 20 + Math.random() * 30;
+        var width = 20 + Math.random() * 30;
+        
+        // Enemy appears at a random edge of the game area:
+        var x, y;
+        switch(Math.round(Math.random() * 3)) {
+            case 0:
+                x = Math.random() * gameArea.canvas.width;
+                y = -height;
+                break;
+            case 1:
+                x = Math.random() * gameArea.canvas.width;
+                y = gameArea.canvas.height;
+                break;
+            case 2:
+                x = -width;
+                y = Math.random() * gameArea.canvas.width;
+                break;
+            case 3:
+                x = gameArea.canvas.width;
+                y = Math.random() * gameArea.canvas.width;
+                break;
+        }
+        
+        var id = Math.random();
+        var speed = Math.random();
+        
+        new enemy(id, x, y, width, height, 0, 0, speed, color, type);   
+    }
+
+    function updateGameArea() {
+        var ended = false;
+        
+        if(!paused) {
+            frames++;
+            gameArea.clear();
+            character.newPos();    
+            character.update();
+		
+            for(var key in projectileList){
+                var projectile = projectileList[key];
+                projectile.newPos();
+                projectile.update();
+            }
+        
+            for(var key in enemyList){
+                var enemy = enemyList[key];
+                enemy.newPos();
+                enemy.update();
+                if(testCollision(character, enemy.component)) {
+                    hp--;
+                }
+            } 
+            
+            for(var key in projectileList){
+                var projectile = projectileList[key];
+                var collision = false;
+                for(var key in enemyList){
+                    var enemy = enemyList[key];
+                    collision = testCollision(projectile.component, enemy.component);
+                    if(collision) {
+                        delete enemyList[enemy.id];
+                        score += 100;
+                        break;
+                    }
+                }
+                if(collision) {
+                    delete projectileList[projectile.id];
+                }
+            }
+            
+            
+            ctx.font = "10px Verdana";
+            ctx.fillStyle = "red";
+            ctx.fillText("HP: " + hp, 30, 30);
+            ctx.fillText("Score: " + score, 30, 40);
+            
+            if(hp < 1){
+                ended = true;
+                ctx.font = "50px Impact";
+                ctx.fillStyle = "red";
+                ctx.fillText("GAME OVER", 50, 200);
+                showEndScreen();
+            }
+        }
+        if(!ended) {
+            requestAnimationFrame(updateGameArea);
+        }
+    }
+
+    function moveUp() {
+        character.offsetY--; 
+    }
+
+    function moveDown() {
+        character.offsetY++; 
+    }
+
+    function moveLeft() {
+        character.offsetX--; 
+    }
+
+    function moveRight() {
+        character.offsetX++; 
+    }
+	
+	function shoot(x, y) {
+		generateProjectileFromCharacter(x, y);
+	}
+    
+    function togglePause() {
+        var menu = document.getElementById("menu");
+        var newGame = document.getElementById("new_game");
+        newGame.style.display = "none";
+        if(!paused) {
+            paused = true; 
+            menu.style.display = "block";
+            clearInterval(enemyInterval);
+        } else {
+            paused = false;
+            menu.style.display = "none";
+            enemyInterval = setInterval(function () {generateEnemy(0.5, "rock.png", "image")}, 500);
+        }
+    }
+    
+    function showEndScreen() {
+        clearInterval(enemyInterval);
+        
+        // Show correct button on menu:
+        var menu = document.getElementById("menu");
+        var continueGame = document.getElementById("continue");
+        continueGame.style.display = "none";
+        var newGame = document.getElementById("new_game");
+        newGame.style.display = "inline-block";
+        var saveGame = document.getElementById("save_game");
+        saveGame.style.display = "none";
+        
+        // Reset global variables:
+        hp = 100;
+        score = 0;
+        projectileList = {};
+        enemyList = {};
+        paused = false;
+        frames = 0;
+        
+        // Delete event listeners:
+        document.removeEventListener('keydown', keyboardControlsManager);
+        document.removeEventListener('click', mouseControlsManager);
+        
+        // Display menu:
+        menu.style.display = "block";
+    }
+    
+	function keyboardControlsManager(e) {
+        switch (e.keyCode) {
+            case 37: // Arrow Left
+            case 65: // A
+                if(!paused) moveLeft();
+                break;
+                
+            case 38: // Arrow Up
+            case 87: // W
+                if(!paused) moveUp();
+                break;
+            case 39:  // Arrow Right
+            case 68:  // D
+                if(!paused) moveRight();
+                break;
+            case 40:  // Arrow Down
+            case 83:  // S
+                if(!paused) moveDown();
+                break;
+            case 27: // Esc
+            case 80: // P
+                togglePause();
+        }
+	}
+	
+	function mouseControlsManager(e) {
+		if(!paused) {
+            // Get mouse pointer position and shoot a new projectile toward it
+            var rect = e.target.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var y = e.clientY - rect.top;
+            shoot(x, y);
+        }
+	}
+    
+    function saveGameMessage() {
+        var msg = {
+            "messageType": "SAVE",
+            "gameState": {
+                "character": JSON.parse(JSON.stringify(character)),
+                "hp": hp,
+                "projectileList": JSON.parse(JSON.stringify(projectileList)),
+                "enemyList": JSON.parse(JSON.stringify(enemyList)),
+                "score": score
+            }
+        };
+        window.parent.postMessage(msg, "*");
+    }
+    
+    function loadGameMessage() {
+        var msg = {
+            "messageType": "LOAD_REQUEST"
+        };
+        window.parent.postMessage(msg, "*");
+    }
+    
+    function saveScoreMessage() {
+        var msg = {
+            "messageType": "SCORE",
+            "score": parseFloat(score).text
+        };
+        window.parent.postMessage(msg, "*");
+    }
+    
+    window.addEventListener("message", function(evt) {
+        if(evt.data.messageType === "LOAD") {
+            var gameState = evt.data.gameState;
+            character = gameState.character;
+            hp = parseFloat(gameState.hp);
+            projectileList = gameState.projectileList;
+            enemyList = gameState.enemyList;
+            score = parseFloat(gameState.score);
+        } else if (evt.data.messageType === "ERROR") {
+            alert(evt.data.info);
+        }
+    });
+    
+	</script>
+    <div id="menu" style="display:none">
+        <button id="continue" onclick="togglePause()">Continue</button>
+        <button id="new_game" onclick="startGame()">New Game</button>
+        <button id="save_game" onclick="saveGameMessage()">Save</button>
+        <button id="load_game" onclick="loadGameMessage()">Load</button>
+        <button id="save_score" onclick="saveScoreMessage()">Save Score</button>
+    </div>
+    <p>Use WASD or arrow keys to move around. Click left mouse button to shoot in the direction of the mouse pointer. Press p or esc to pause.</p>
+</body>
+</html>
