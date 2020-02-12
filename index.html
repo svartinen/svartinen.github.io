@@ -417,12 +417,17 @@
     
     window.addEventListener("message", function(evt) {
         if(evt.data.messageType === "LOAD") {
+            showEndScreen();
+            startGame();
+            
             var gameState = evt.data.gameState;
-            character = gameState.character;
-            hp = parseFloat(gameState.hp);
-            projectileList = gameState.projectileList;
-            enemyList = gameState.enemyList;
-            score = parseFloat(gameState.score);
+            character = JSON.parse(gameState.character);
+            hp = gameState.hp;
+            projectileList = JSON.parse(gameState.projectileList);
+            enemyList = JSON.parse(gameState.enemyList);
+            score = gameState.score;
+            
+            console.log(gameState);
         } else if (evt.data.messageType === "ERROR") {
             alert(evt.data.info);
         }
