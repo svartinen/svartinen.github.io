@@ -406,6 +406,7 @@
             "messageType": "LOAD_REQUEST"
         };
         window.parent.postMessage(msg, "*");
+        loading = true;
     }
     
     function saveScoreMessage() {
@@ -417,9 +418,7 @@
     }
     
     window.addEventListener("message", function(evt) {
-        if(evt.data.messageType === "LOAD") {
-            loading = true;
-            
+        if(evt.data.messageType === "LOAD") {  
             showEndScreen();
             startGame();
             
