@@ -347,6 +347,9 @@
         document.removeEventListener('keydown', keyboardControlsManager);
         document.removeEventListener('click', mouseControlsManager);
         
+        // Stop spawning enemies:
+        clearInterval(enemyInterval);
+        
         // Display menu:
         menu.style.display = "block";
     }
