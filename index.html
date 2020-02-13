@@ -348,7 +348,7 @@
     function endScreen() {
         ctx.font = "50px Impact";
         ctx.fillStyle = "red";
-        ctx.fillText("GAME OVER", 50, 200); 
+        ctx.fillText("GAME OVER", 100, 200); 
     }
     
 	function keyboardControlsManager(e) {
@@ -415,32 +415,63 @@
         window.parent.postMessage(msg, "*");
     }
     
+    // A regex that accepts valid file names, such as "image", "image.png"
+    var regex_finename = /^[0-9a-zA-Z\^\&\'\@\{\}\[\]\,\$\=\!\-\#\(\)\.\%\+\~\_ ]+$/;
+    
     window.addEventListener("message", function(evt) {
         if(evt.data.messageType === "LOAD") {
+            // Initialize a fresh game:
             startGame();
             
+            // Get necessary values from save game.
+            // Directly replacing character, projectileList and enemyList
+            // with saved values doesn't work, since functions and images
+            // are lost in transit
             var gameState = evt.data.gameState;
             
-            character.x = gameState.character.x;
-            character.y = gameState.character.y;
-            character.offsetX = gameState.character.offsetX;
-            character.offsetY = gameState.character.offsetY;
+            // All received values should be sanitized with functions
+            // such as parseFloat() for security
             
-            hp = gameState.hp;
+            // Set values for character:
+            character.x = parseFloat(gameState.character.x);
+            character.y = parseFloat(gameState.character.y);
+            character.offsetX = parseFloat(gameState.character.offsetX);
+            character.offsetY = parseFloat(gameState.character.offsetY);
+            
+            hp = parseFloat(gameState.hp);
             
             for(var key in gameState.projectileList){
                 var savedProjectile = gameState.projectileList[key];
-                new projectile(savedProjectile.id, savedProjectile.component.x, savedProjectile.component.y, savedProjectile.component.width, 
-                    savedProjectile.component.height, savedProjectile.component.offsetX, savedProjectile.component.offsetY);
+                
+                // Get necessary projectile values from save game:
+                var id = parseFloat(savedProjectile.id)
+                var x = parseFloat(savedProjectile.component.x)
+                var y = parseFloat(savedProjectile.component.y)
+                var width = parseFloat(savedProjectile.component.width)
+                var height = parseFloat(savedProjectile.component.height)
+                var offsetX = parseFloat(savedProjectile.component.offsetX)
+                var offsetY = parseFloat(savedProjectile.component.offsetY)
+                
+                new projectile(id, x, y, width, height, offsetX, offsetY);
             }
             
             for(var key in gameState.enemyList){
                 var savedEnemy = gameState.enemyList[key];
-                new enemy(savedEnemy.id, savedEnemy.component.x, savedEnemy.component.y, savedEnemy.component.width, savedEnemy.component.height, 
-                    savedEnemy.component.offsetX, savedEnemy.component.offsetY, savedEnemy.component.speed, savedEnemy.component.color, savedEnemy.component.type);
+                var id = parseFloat(savedEnemy.id)
+                var x = parseFloat(savedEnemy.component.x)
+                var y = parseFloat(savedEnemy.component.y)
+                var width = parseFloat(savedEnemy.component.width)
+                var height = parseFloat(savedEnemy.component.height)
+                var offsetX = parseFloat(savedEnemy.component.offsetX)
+                var offsetY = parseFloat(savedEnemy.component.offsetY)
+                var speed = parseFloat(savedEnemy.component.speed)
+                var color = savedEnemy.component.color.match(regex_finename)[0]
+                var type = savedEnemy.component.type ? savedEnemy.component.type.match(regex_finename)[0] : null;
+                
+                new enemy(id, x, y, width, height, offsetX, offsetY, speed, color, type);
             }
             
-            score = gameState.score;
+            score = parseFloat(gameState.score);
         } else if (evt.data.messageType === "ERROR") {
             alert(evt.data.info);
         }
